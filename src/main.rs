@@ -33,6 +33,7 @@ use nano_rust_drivers::{error, ssd1306, ssd1306_registers};
 use nano_rust_drivers::ssd1306_registers::{BLACK, WHITE};
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::I2C;
+use rp2040_hal::uart::{DataBits, StopBits, UartConfig, UartPeripheral};
 
 #[entry]
 fn main() -> ! {
@@ -64,6 +65,18 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut peripherals.RESETS,
     );
+    let uart_pins = (
+        pins.gpio0.into_function(),
+        pins.gpio1.into_function(),
+    );
+    let uart = UartPeripheral::new(peripherals.UART0, uart_pins, &mut peripherals.RESETS)
+        .enable(
+            UartConfig::new(115200.Hz(), DataBits::Eight, None, StopBits::One),
+            clocks.peripheral_clock.freq(),
+        ).unwrap();
+
+    uart.write_full_blocking(b"Hello World!\r\n");
+    // info!("Startup");
 
     // This is the correct pin on the Raspberry Pico board. On other boards, even if they have an
     // on-board LED, it might need to be changed.
@@ -75,15 +88,7 @@ fn main() -> ! {
     // LED to one of the GPIO pins, and reference that pin here. Don't forget adding an appropriate resistor
     // in series with the LED.
     let mut led_pin = pins.led.into_push_pull_output();
-    //
-    // loop {
-    //     info!("on!");
-    //     led_pin.set_high().unwrap();
-    //     delay.delay_ms(2000);
-    //     info!("off!");
-    //     led_pin.set_low().unwrap();
-    //     delay.delay_ms(2000);
-    // }
+
 
     // let dp = Peripherals::take().unwrap();
     // let pins = arduino_hal::pins!(dp);
@@ -177,13 +182,41 @@ fn main() -> ! {
                 return Err(error.into());
             }
         };
+
         loop {
-            display.fill_screen(BLACK);
+            // delay.delay_ms(1000);
+            // display.fill_screen(ssd1306_registers::BLACK);
+            // display.display()?;
+            // led_pin.set_high().unwrap();
+            // delay.delay_ms(1000);
+            //
+            // display.fill_screen(ssd1306_registers::WHITE);
+            // display.display()?;
+            // led_pin.set_low().unwrap();
+            // delay.delay_ms(1000);
+            display.fill_screen(ssd1306_registers::BLACK);
             display.display()?;
             delay.delay_ms(1000);
-            display.fill_screen(WHITE);
-            display.display()?;
+            display.fill_screen(ssd1306_registers::WHITE);
+            led_pin.set_high().unwrap();
+            for i in 0..=ssd1306::BUFFER_SIZE {
+                led_pin.set_high().unwrap();
+                delay.delay_ms(20);
+                led_pin.set_low().unwrap();
+                delay.delay_ms(20);
+                display.display_num(i)?;
+            }
+            led_pin.set_low().unwrap();
             delay.delay_ms(1000);
+            // display.display_num(10)?;
+            // delay.delay_ms(1000);
+
+            // display.fill_screen(BLACK);
+            // display.display()?;
+            // delay.delay_ms(1000);
+            // display.fill_screen(WHITE);
+            // display.display()?;
+            // delay.delay_ms(1000);
             // display.fill_screen(ssd1306_registers::BLACK);
             // for i in 0..32 {
             //     display.draw_pixel(i, i, WHITE)?;
@@ -228,6 +261,16 @@ fn main() -> ! {
     })();
     if let Err(error) = result {
         info!("Error");
+        loop {
+            // uart.write_full_blocking(b"on!\n");
+            // info!("on!");
+            led_pin.set_high().unwrap();
+            delay.delay_ms(100);
+            // uart.write_full_blocking(b"off!\n");
+            // info!("off!");
+            led_pin.set_low().unwrap();
+            delay.delay_ms(100);
+        }
         // info!("Error: {}", error);
     }
     loop {}

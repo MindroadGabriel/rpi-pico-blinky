@@ -33,6 +33,7 @@ use nano_rust_drivers::{error, ssd1306, ssd1306_registers};
 use nano_rust_drivers::ssd1306_registers::{BLACK, WHITE};
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::I2C;
+use rp2040_hal::uart::{DataBits, StopBits, UartConfig, UartPeripheral};
 
 #[entry]
 fn main() -> ! {
@@ -57,13 +58,24 @@ fn main() -> ! {
         .unwrap();
 
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
-
     let pins = bsp::Pins::new(
         peripherals.IO_BANK0,
         peripherals.PADS_BANK0,
         sio.gpio_bank0,
         &mut peripherals.RESETS,
     );
+    // let uart_pins = (
+    //     pins.gpio0.into_function(),
+    //     pins.gpio1.into_function(),
+    // );
+    // let uart = UartPeripheral::new(peripherals.UART0, uart_pins, &mut peripherals.RESETS)
+    //     .enable(
+    //         UartConfig::new(9600.Hz(), DataBits::Eight, None, StopBits::One),
+    //         clocks.peripheral_clock.freq(),
+    //     ).unwrap();
+    //
+    // uart.write_full_blocking(b"Hello World!\r\n");
+    info!("Startup");
 
     // This is the correct pin on the Raspberry Pico board. On other boards, even if they have an
     // on-board LED, it might need to be changed.
@@ -157,7 +169,15 @@ fn main() -> ! {
     //     led.set_low();
     //     arduino_hal::delay_ms(2000);
     // }
+    loop {
+        info!("Loop");
+        led_pin.set_low();
+        delay.delay_ms(100);
+        led_pin.set_high();
+        delay.delay_ms(100);
+    }
     let result = (|| -> Result<(), error::UDisplayError<bsp::hal::i2c::Error>> {
+
         let mut i2c = I2C::i2c0(
             peripherals.I2C0,
             pins.gpio20.reconfigure(), // sda
